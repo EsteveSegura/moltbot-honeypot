@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Honeypot Admin Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+      background: #0d1117;
+      color: #c9d1d9;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #58a6ff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 .icon {
+      font-size: 28px;
+    }
+
+    .service-badge {
+      background: #238636;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .stat-card .label {
+      font-size: 12px;
+      color: #8b949e;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #58a6ff;
+    }
+
+    .stat-card.danger .value {
+      color: #f85149;
+    }
+
+    .stat-card.warning .value {
+      color: #d29922;
+    }
+
+    .stat-card.success .value {
+      color: #3fb950;
+    }
+
+    .panel {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .panel-header h2 {
+      font-size: 16px;
+      color: #c9d1d9;
+    }
+
+    .panel-body {
+      padding: 0;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-tab {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .filter-tab:hover {
+      background: #30363d;
+      color: #c9d1d9;
+    }
+
+    .filter-tab.active {
+      background: #388bfd;
+      border-color: #388bfd;
+      color: white;
+    }
+
+    .attack-list {
+      list-style: none;
+    }
+
+    .attack-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid #21262d;
+      transition: background 0.2s;
+    }
+
+    .attack-item:hover {
+      background: #1c2128;
+    }
+
+    .attack-item:last-child {
+      border-bottom: none;
+    }
+
+    .attack-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .attack-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .attack-type.http { background: #1f6feb; color: white; }
+    .attack-type.ws_connection { background: #8957e5; color: white; }
+    .attack-type.ws_message { background: #a371f7; color: white; }
+    .attack-type.tool_invoke { background: #f85149; color: white; }
+    .attack-type.prompt_injection { background: #da3633; color: white; }
+    .attack-type.chat_completion { background: #238636; color: white; }
+    .attack-type.reconnaissance { background: #d29922; color: white; }
+
+    .attack-time {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .attack-details {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 16px;
+      font-size: 13px;
+    }
+
+    .attack-details dt {
+      color: #8b949e;
+    }
+
+    .attack-details dd {
+      color: #c9d1d9;
+      word-break: break-all;
+    }
+
+    .attack-body {
+      margin-top: 12px;
+      background: #0d1117;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .attack-body pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .category-breakdown {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      padding: 20px;
+    }
+
+    .category-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #21262d;
+      border-radius: 6px;
+    }
+
+    .category-name {
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .category-count {
+      font-size: 14px;
+      font-weight: bold;
+      color: #58a6ff;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #3fb950;
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: #3fb950;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8b949e;
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .ip-list {
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .ip-badge {
+      background: #21262d;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+
+    .two-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1000px) {
+      .two-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <span class="icon">🍯</span>
+        Honeypot Admin Dashboard
+      </h1>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <span class="service-badge" id="service-name">Loading...</span>
+        <div class="live-indicator">
+          <span class="live-dot"></span>
+          Live
+        </div>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">HTTP Requests</div>
+        <div class="value" id="stat-http">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">WS Connections</div>
+        <div class="value" id="stat-ws-conn">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">WS Messages</div>
+        <div class="value" id="stat-ws-msg">0</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="label">Unique IPs</div>
+        <div class="value" id="stat-ips">0</div>
+      </div>
+      <div class="stat-card success">
+        <div class="label">Uptime</div>
+        <div class="value" id="stat-uptime">0s</div>
+      </div>
+    </div>
+
+    <div class="two-columns">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Attack Categories</h2>
+        </div>
+        <div class="category-breakdown" id="categories">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Unique Source IPs</h2>
+        </div>
+        <div class="ip-list" id="ip-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Recent Attacks</h2>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All</button>
+          <button class="filter-tab" data-filter="http">HTTP</button>
+          <button class="filter-tab" data-filter="ws_connection">WS Connect</button>
+          <button class="filter-tab" data-filter="ws_message">WS Message</button>
+          <button class="filter-tab" data-filter="tool_invoke">Tool Invoke</button>
+          <button class="filter-tab" data-filter="prompt_injection">Prompt Injection</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <ul class="attack-list" id="attack-list">
+          <li class="empty-state">
+            <div class="icon">📡</div>
+            <div>Waiting for attacks...</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentFilter = 'all';
+    let attacks = [];
+    let stats = {};
+
+    // Format time ago
+    function timeAgo(date) {
+      const seconds = Math.floor((Date.now() - new Date(date)) / 1000);
+      if (seconds < 60) return `${seconds}s ago`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    // Format uptime
+    function formatUptime(ms) {
+      const seconds = Math.floor(ms / 1000);
+      if (seconds < 60) return `${seconds}s`;
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ${minutes % 60}m`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ${hours % 24}h`;
+    }
+
+    // Render attack item
+    function renderAttack(attack) {
+      const body = attack.body || attack.message;
+      const bodyHtml = body ? `
+        <div class="attack-body">
+          <pre>${JSON.stringify(body, null, 2)}</pre>
+        </div>
+      ` : '';
+
+      return `
+        <li class="attack-item" data-type="${attack.type}" data-category="${attack.category}">
+          <div class="attack-header">
+            <div>
+              <span class="attack-type ${attack.category || attack.type}">${attack.category || attack.type}</span>
+              ${attack.method ? `<span style="margin-left: 8px; color: #8b949e;">${attack.method} ${attack.path || ''}</span>` : ''}
+            </div>
+            <span class="attack-time">${timeAgo(attack.timestamp)}</span>
+          </div>
+          <dl class="attack-details">
+            <dt>IP</dt>
+            <dd>${attack.ip || 'N/A'}</dd>
+            ${attack.userAgent ? `<dt>User Agent</dt><dd>${attack.userAgent}</dd>` : ''}
+            ${attack.clientId ? `<dt>Client ID</dt><dd>${attack.clientId}</dd>` : ''}
+          </dl>
+          ${bodyHtml}
+        </li>
+      `;
+    }
+
+    // Update attack list
+    function updateAttackList() {
+      const list = document.getElementById('attack-list');
+      const filtered = currentFilter === 'all'
+        ? attacks
+        : attacks.filter(a => a.type === currentFilter || a.category === currentFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <li class="empty-state">
+            <div class="icon">📡</div>
+            <div>No attacks yet${currentFilter !== 'all' ? ' for this filter' : ''}...</div>
+          </li>
+        `;
+        return;
+      }
+
+      list.innerHTML = filtered.map(renderAttack).join('');
+    }
+
+    // Update stats display
+    function updateStats() {
+      document.getElementById('stat-http').textContent = stats.totalHttpRequests || 0;
+      document.getElementById('stat-ws-conn').textContent = stats.totalWsConnections || 0;
+      document.getElementById('stat-ws-msg').textContent = stats.totalWsMessages || 0;
+      document.getElementById('stat-ips').textContent = stats.uniqueIps || 0;
+      document.getElementById('stat-uptime').textContent = formatUptime(stats.uptimeMs || 0);
+
+      // Update categories
+      const categories = document.getElementById('categories');
+      const attacksByType = stats.attacksByType || {};
+      if (Object.keys(attacksByType).length > 0) {
+        categories.innerHTML = Object.entries(attacksByType)
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => `
+            <div class="category-item">
+              <span class="category-name">${name}</span>
+              <span class="category-count">${count}</span>
+            </div>
+          `).join('');
+      }
+    }
+
+    // Fetch initial data
+    async function fetchInitialData() {
+      try {
+        // Fetch config
+        const configRes = await fetch('/api/config');
+        const config = await configRes.json();
+        document.getElementById('service-name').textContent = config.displayName;
+        document.title = `${config.displayName} Honeypot Dashboard`;
+
+        // Fetch stats
+        const statsRes = await fetch('/api/stats');
+        stats = await statsRes.json();
+        updateStats();
+
+        // Fetch attacks
+        const attacksRes = await fetch('/api/attacks?limit=200');
+        const data = await attacksRes.json();
+        attacks = data.attacks;
+        updateAttackList();
+
+        // Fetch IPs
+        const ipsRes = await fetch('/api/ips');
+        const ipsData = await ipsRes.json();
+        const ipList = document.getElementById('ip-list');
+        if (ipsData.ips.length > 0) {
+          ipList.innerHTML = ipsData.ips.map(ip => `<span class="ip-badge">${ip}</span>`).join('');
+        } else {
+          ipList.innerHTML = '<span style="color: #8b949e;">No IPs recorded yet</span>';
+        }
+      } catch (err) {
+        console.error('Failed to fetch data:', err);
+      }
+    }
+
+    // Setup SSE for real-time updates
+    function setupEventStream() {
+      const eventSource = new EventSource('/api/stream');
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'stats') {
+          stats = data.data;
+          updateStats();
+        } else if (data.type === 'attack') {
+          attacks.unshift(data.data);
+          if (attacks.length > 500) attacks.pop();
+          updateAttackList();
+
+          // Update IP list if new IP
+          const ipList = document.getElementById('ip-list');
+          if (data.data.ip && !ipList.innerHTML.includes(data.data.ip)) {
+            const badge = document.createElement('span');
+            badge.className = 'ip-badge';
+            badge.textContent = data.data.ip;
+            ipList.prepend(badge);
+          }
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.log('SSE connection lost, reconnecting...');
+        setTimeout(setupEventStream, 5000);
+      };
+    }
+
+    // Setup filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        updateAttackList();
+      });
+    });
+
+    // Initialize
+    fetchInitialData();
+    setupEventStream();
+  </script>
+</body>
+</html>
