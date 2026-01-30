@@ -61,7 +61,7 @@ export const config = {
 
   // mDNS/Bonjour settings
   mdns: {
-    enabled: process.env.MDNS_ENABLED !== 'false',
+    enabled: process.env.MDNS_ENABLED === 'true',
     hostname: process.env.MDNS_HOSTNAME || 'workstation',
     instanceName: process.env.MDNS_INSTANCE_NAME || null,
   },

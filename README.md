@@ -87,7 +87,7 @@ Make sure to open port 41892 in your firewall.
 | `ADMIN_PORT` | `41892` | Admin port |
 | `ADMIN_USERNAME` | `admin` | Basic Auth username |
 | `ADMIN_PASSWORD` | `admin-secret-2024` | Basic Auth password |
-| `MDNS_ENABLED` | `true` | Enable mDNS/Bonjour |
+| `MDNS_ENABLED` | `false` | Enable Node.js mDNS (disable if using avahi) |
 | `MDNS_HOSTNAME` | `workstation` | mDNS hostname |
 | `DATA_DIR` | `./data` | Directory for attack logs |
 

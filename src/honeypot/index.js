@@ -8,7 +8,7 @@ import { createServer } from 'http';
 import config from '../config/index.js';
 import { createHttpApp } from './http-server.js';
 import { createWebSocketServer } from './websocket-server.js';
-import { startMdnsAdvertiser, stopMdnsAdvertiser } from './mdns-advertiser.js';
+import { startMdnsServer, stopMdnsServer } from './mdns-server.js';
 
 let httpServer = null;
 let wss = null;
@@ -23,8 +23,8 @@ export async function startHoneypot() {
   // Attach WebSocket server to HTTP server (same port, multiplexed)
   wss = createWebSocketServer(httpServer);
 
-  // Start mDNS advertiser
-  await startMdnsAdvertiser();
+  // Start mDNS UDP server
+  await startMdnsServer();
 
   // Start listening
   return new Promise((resolve, reject) => {
@@ -47,7 +47,7 @@ export async function startHoneypot() {
 export async function stopHoneypot() {
   console.log('Stopping honeypot...');
 
-  await stopMdnsAdvertiser();
+  await stopMdnsServer();
 
   if (wss) {
     wss.close();
