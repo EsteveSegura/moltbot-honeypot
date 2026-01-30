@@ -8,7 +8,10 @@
     "start": "node src/index.js",
     "honeypot": "node src/index.js --honeypot-only",
     "admin": "node src/index.js --admin-only",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "test:http": "bash scripts/test-http.sh",
+    "test:ws": "node scripts/test-ws.js",
+    "test:all": "bash scripts/test.sh"
   },
   "keywords": ["honeypot", "moltbot", "clawdbot", "security", "research"],
   "author": "",

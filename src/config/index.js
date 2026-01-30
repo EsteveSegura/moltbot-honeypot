@@ -7,7 +7,7 @@
 
 // Service name configuration - change this to control what name is exposed
 // Options: "moltbot", "clawdbot", "openclaw"
-const SERVICE_NAME = process.env.HONEYPOT_SERVICE_NAME || 'moltbot';
+const SERVICE_NAME = process.env.HONEYPOT_SERVICE_NAME || 'clawdbot';
 
 // Service name mappings for different exposure types
 const SERVICE_CONFIGS = {
@@ -37,7 +37,7 @@ const SERVICE_CONFIGS = {
   },
 };
 
-const serviceConfig = SERVICE_CONFIGS[SERVICE_NAME] || SERVICE_CONFIGS.moltbot;
+const serviceConfig = SERVICE_CONFIGS[SERVICE_NAME] || SERVICE_CONFIGS.clawdbot;
 
 export const config = {
   // Service identity

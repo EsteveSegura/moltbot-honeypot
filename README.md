@@ -14,6 +14,22 @@ Replicates the HTTP gateway, WebSocket, and mDNS services to appear on Shodan as
 npm install
 ```
 
+### mDNS Setup (required for Shodan indexing)
+
+For Shodan to detect your honeypot via mDNS, you need avahi-daemon:
+
+```bash
+sudo ./scripts/setup-avahi.sh
+```
+
+This installs avahi-daemon, creates the service file, and opens port 5353/UDP.
+
+To use a different service name:
+
+```bash
+sudo HONEYPOT_SERVICE_NAME=clawdbot ./scripts/setup-avahi.sh
+```
+
 ## Usage
 
 ```bash
@@ -51,20 +67,47 @@ HONEYPOT_SERVICE_NAME=clawdbot npm start
 
 Shows real-time: HTTP requests, WebSocket connections, unique IPs, attack categories.
 
+For remote access:
+
+```bash
+# To expose admin on the internet
+ADMIN_HOST=0.0.0.0 npm start
+```
+
+Make sure to open port 41892 in your firewall.
+
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `HONEYPOT_SERVICE_NAME` | `moltbot` | Service to mimic: `moltbot`, `clawdbot`, `openclaw` |
+| `HONEYPOT_SERVICE_NAME` | `clawdbot` | Service to mimic: `moltbot`, `clawdbot`, `openclaw` |
 | `HONEYPOT_HOST` | `0.0.0.0` | Honeypot host |
 | `HONEYPOT_PORT` | `18789` | Honeypot port |
 | `ADMIN_HOST` | `127.0.0.1` | Admin host |
 | `ADMIN_PORT` | `41892` | Admin port |
 | `ADMIN_USERNAME` | `admin` | Basic Auth username |
-| `ADMIN_PASSWORD` | `honeypot-secret-2024` | Basic Auth password |
+| `ADMIN_PASSWORD` | `admin-secret-2024` | Basic Auth password |
 | `MDNS_ENABLED` | `true` | Enable mDNS/Bonjour |
-| `MDNS_HOSTNAME` | `honeypot-server` | mDNS hostname |
+| `MDNS_HOSTNAME` | `workstation` | mDNS hostname |
 | `DATA_DIR` | `./data` | Directory for attack logs |
+
+## Testing Endpoints
+
+Test against any MoltBot/ClawdBot instance:
+
+```bash
+# Test all endpoints (HTTP + WebSocket)
+./scripts/test.sh 80.42.32.100
+
+# With custom port
+./scripts/test.sh 80.42.32.100 18789
+
+# HTTP only
+./scripts/test-http.sh 80.42.32.100
+
+# WebSocket only
+node scripts/test-ws.js 80.42.32.100
+```
 
 ## Honeypot Endpoints
 
