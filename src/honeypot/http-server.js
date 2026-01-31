@@ -33,40 +33,24 @@ export function createHttpApp() {
     // Log to console
     console.log(`[HTTP] ${req.method} ${req.path} from ${ip}`);
 
-    // Add fake headers to mimic real service
-    res.setHeader('Server', config.serverHeader);
-    res.setHeader('X-Powered-By', config.displayName);
+    // Add headers to mimic real ClawdBot
+    res.setHeader('server', `${config.serviceName}-gateway/${config.version}`);
+    res.setHeader('x-powered-by', config.serviceName);
+    res.setHeader('x-request-id', randomUUID());
+    res.setHeader('x-content-type-options', 'nosniff');
+    res.setHeader('x-frame-options', 'DENY');
 
     next();
   });
 
-  // Endpoint: Root - Control UI mock
+  // Root: API status (JSON) - mimics real ClawdBot gateway
   app.get('/', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>${config.uiTitle}</title>
-    <style>
-      body { font-family: system-ui, sans-serif; padding: 40px; background: #1a1a2e; color: #eee; }
-      h1 { color: #e94560; }
-      .status { background: #16213e; padding: 20px; border-radius: 8px; margin-top: 20px; }
-      .status p { margin: 8px 0; }
-      .badge { display: inline-block; padding: 4px 8px; background: #0f3460; border-radius: 4px; font-size: 12px; }
-      .badge.ok { background: #1db954; }
-    </style>
-  </head>
-  <body>
-    <h1>${config.displayName} Gateway</h1>
-    <div class="status">
-      <p><strong>Status:</strong> <span class="badge ok">Running</span></p>
-      <p><strong>Version:</strong> ${config.version}</p>
-      <p><strong>Protocol:</strong> ${config.protocol}</p>
-      <p><strong>Port:</strong> ${config.honeypot.port}</p>
-    </div>
-  </body>
-</html>
-    `);
+    res.json({
+      name: `${config.serviceName}-gateway`,
+      version: config.version,
+      status: 'running',
+      uptime: Math.floor(process.uptime()),
+    });
   });
 
   // Endpoint: /v1/models - Model catalog
@@ -238,6 +222,67 @@ export function createHttpApp() {
       status: 'running',
       version: config.version,
       name: config.displayName,
+    });
+  });
+
+  // === Hooks Endpoints ===
+
+  // Endpoint: POST /hooks/wake - Wake hook for triggering agent
+  app.post('/hooks/wake', (req, res) => {
+    const { text, mode = 'now' } = req.body;
+
+    console.log('[HOOKS WAKE]', {
+      text: text?.slice?.(0, 100),
+      mode,
+    });
+
+    res.json({
+      ok: true,
+      mode,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Endpoint: POST /hooks/agent - Agent hook for remote execution
+  app.post('/hooks/agent', (req, res) => {
+    const { message, sessionKey, prompt } = req.body;
+
+    console.log('[HOOKS AGENT - DANGEROUS]', {
+      message: message?.slice?.(0, 100) || prompt?.slice?.(0, 100),
+      sessionKey,
+    });
+
+    res.json({
+      ok: true,
+      runId: `run_${randomUUID()}`,
+      status: 'queued',
+    });
+  });
+
+  // Endpoint: POST /hooks/notify - Notification hook
+  app.post('/hooks/notify', (req, res) => {
+    const { event, payload } = req.body;
+
+    console.log('[HOOKS NOTIFY]', {
+      event,
+      payload,
+    });
+
+    res.json({
+      ok: true,
+      received: true,
+    });
+  });
+
+  // Endpoint: GET /hooks/status - Hooks status
+  app.get('/hooks/status', (req, res) => {
+    res.json({
+      ok: true,
+      hooks: {
+        wake: { enabled: true },
+        agent: { enabled: true },
+        notify: { enabled: true },
+      },
     });
   });
 

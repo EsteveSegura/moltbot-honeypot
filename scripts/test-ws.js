@@ -17,6 +17,7 @@ const pendingTests = [];
 let testIndex = 0;
 
 const tests = [
+  // Connection
   {
     name: 'Connect with auth',
     message: {
@@ -26,6 +27,8 @@ const tests = [
       params: { auth: { token: 'test-token-123' } },
     },
   },
+
+  // System methods
   {
     name: 'Health check',
     message: {
@@ -36,14 +39,81 @@ const tests = [
     },
   },
   {
-    name: 'Send message',
+    name: 'Status',
     message: {
       type: 'req',
       id: null,
-      method: 'send',
-      params: { target: 'telegram', message: 'test message' },
+      method: 'status',
+      params: {},
     },
   },
+  {
+    name: 'Models list',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'models.list',
+      params: {},
+    },
+  },
+  {
+    name: 'Usage status',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'usage.status',
+      params: {},
+    },
+  },
+
+  // Sessions methods
+  {
+    name: 'Sessions list',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'sessions.list',
+      params: {},
+    },
+  },
+  {
+    name: 'Sessions preview',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'sessions.preview',
+      params: { sessionId: 'test-session' },
+    },
+  },
+  {
+    name: 'Sessions delete',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'sessions.delete',
+      params: { sessionId: 'test-session' },
+    },
+  },
+  {
+    name: 'Sessions reset',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'sessions.reset',
+      params: { sessionId: 'test-session' },
+    },
+  },
+  {
+    name: 'Sessions compact',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'sessions.compact',
+      params: {},
+    },
+  },
+
+  // Agent methods
   {
     name: 'Agent request',
     message: {
@@ -51,6 +121,44 @@ const tests = [
       id: null,
       method: 'agent',
       params: { prompt: 'execute whoami' },
+    },
+  },
+  {
+    name: 'Agent identity get',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'agent.identity.get',
+      params: {},
+    },
+  },
+  {
+    name: 'Agent wait',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'agent.wait',
+      params: { runId: 'test-run-id' },
+    },
+  },
+  {
+    name: 'Agents list',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'agents.list',
+      params: {},
+    },
+  },
+
+  // Chat methods
+  {
+    name: 'Send message',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'send',
+      params: { target: 'telegram', message: 'test message' },
     },
   },
   {
@@ -63,14 +171,110 @@ const tests = [
     },
   },
   {
-    name: 'Sessions list',
+    name: 'Chat history',
     message: {
       type: 'req',
       id: null,
-      method: 'sessions.list',
+      method: 'chat.history',
       params: {},
     },
   },
+  {
+    name: 'Chat abort',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'chat.abort',
+      params: {},
+    },
+  },
+
+  // Config methods
+  {
+    name: 'Config get',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'config.get',
+      params: {},
+    },
+  },
+  {
+    name: 'Config set',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'config.set',
+      params: { key: 'test', value: 'value' },
+    },
+  },
+  {
+    name: 'Config schema',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'config.schema',
+      params: {},
+    },
+  },
+  {
+    name: 'Config patch',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'config.patch',
+      params: { patch: { test: 'value' } },
+    },
+  },
+
+  // Node methods
+  {
+    name: 'Node list',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'node.list',
+      params: {},
+    },
+  },
+  {
+    name: 'Node describe',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'node.describe',
+      params: { nodeId: 'test-node' },
+    },
+  },
+  {
+    name: 'Node pair request',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'node.pair.request',
+      params: { nodeId: 'test-node' },
+    },
+  },
+  {
+    name: 'Node pair list',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'node.pair.list',
+      params: {},
+    },
+  },
+  {
+    name: 'Node pair approve',
+    message: {
+      type: 'req',
+      id: null,
+      method: 'node.pair.approve',
+      params: { requestId: 'test-request' },
+    },
+  },
+
+  // Unknown method (should fail)
   {
     name: 'Unknown method',
     message: {

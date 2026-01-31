@@ -9,6 +9,7 @@ import config from '../config/index.js';
 import { createHttpApp } from './http-server.js';
 import { createWebSocketServer } from './websocket-server.js';
 import { startMdnsServer, stopMdnsServer } from './mdns-server.js';
+import { startUiServer, stopUiServer } from './ui-server.js';
 
 let httpServer = null;
 let wss = null;
@@ -26,12 +27,18 @@ export async function startHoneypot() {
   // Start mDNS UDP server
   await startMdnsServer();
 
+  // Start UI server (separate port)
+  await startUiServer();
+
   // Start listening
   return new Promise((resolve, reject) => {
     httpServer.listen(config.honeypot.port, config.honeypot.host, () => {
       console.log('');
       console.log(`=== ${config.displayName} Honeypot Started ===`);
-      console.log(`HTTP/WS: http://${config.honeypot.host}:${config.honeypot.port}`);
+      console.log(`Gateway API: http://${config.honeypot.host}:${config.honeypot.port}`);
+      if (config.ui.enabled) {
+        console.log(`UI Server:   http://${config.ui.host}:${config.ui.port}`);
+      }
       console.log(`Service: ${config.serviceName}`);
       console.log(`mDNS: _${config.mdnsServiceType}._tcp.local`);
       console.log('');
@@ -48,6 +55,7 @@ export async function stopHoneypot() {
   console.log('Stopping honeypot...');
 
   await stopMdnsServer();
+  await stopUiServer();
 
   if (wss) {
     wss.close();

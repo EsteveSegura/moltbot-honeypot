@@ -102,6 +102,7 @@ function handleRequest(ws, message, clientId) {
       handleConnect(ws, message, clientId);
       break;
 
+    // === System Methods ===
     case 'health':
       sendResponse(ws, id, true, {
         status: 'ok',
@@ -110,6 +111,121 @@ function handleRequest(ws, message, clientId) {
       });
       break;
 
+    case 'status':
+      sendResponse(ws, id, true, {
+        status: 'ok',
+        uptime: Math.floor(process.uptime()),
+        version: config.version,
+        protocol: config.protocol,
+      });
+      break;
+
+    case 'models.list':
+      sendResponse(ws, id, true, {
+        models: [
+          { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
+          { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic' },
+          { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+          { id: `${config.serviceName}:main`, name: config.displayName, provider: 'local' },
+        ],
+      });
+      break;
+
+    case 'usage.status':
+      sendResponse(ws, id, true, {
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          requestCount: 0,
+          period: 'daily',
+          resetAt: new Date(Date.now() + 86400000).toISOString(),
+        },
+      });
+      break;
+
+    // === Sessions Methods ===
+    case 'sessions.list':
+      sendResponse(ws, id, true, {
+        sessions: [],
+      });
+      break;
+
+    case 'sessions.preview':
+      console.log('[WS SESSIONS.PREVIEW]', { sessionId: params?.sessionId });
+      sendResponse(ws, id, true, {
+        session: {
+          id: params?.sessionId || `session_${randomUUID()}`,
+          name: 'Session',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messageCount: 0,
+        },
+      });
+      break;
+
+    case 'sessions.delete':
+      console.log('[WS SESSIONS.DELETE]', { sessionId: params?.sessionId });
+      sendResponse(ws, id, true, { ok: true });
+      break;
+
+    case 'sessions.reset':
+      console.log('[WS SESSIONS.RESET]', { sessionId: params?.sessionId });
+      sendResponse(ws, id, true, { ok: true });
+      break;
+
+    case 'sessions.compact':
+      console.log('[WS SESSIONS.COMPACT]');
+      sendResponse(ws, id, true, { ok: true });
+      break;
+
+    // === Agent Methods ===
+    case 'agent':
+    case 'agent.run':
+      console.log('[WS AGENT REQUEST - DANGEROUS]', {
+        prompt: params?.prompt?.slice?.(0, 100) || params?.message?.slice?.(0, 100),
+      });
+      const runId = `run_${randomUUID()}`;
+      sendResponse(ws, id, true, {
+        runId,
+        status: 'queued',
+      });
+      // Send fake agent events
+      setTimeout(() => {
+        sendEvent(ws, 'agent.started', { runId });
+      }, 200);
+      setTimeout(() => {
+        sendEvent(ws, 'agent.completed', {
+          runId,
+          output: `${config.displayName} agent response`,
+        });
+      }, 1000);
+      break;
+
+    case 'agent.identity.get':
+      sendResponse(ws, id, true, {
+        id: `agent_${randomUUID()}`,
+        name: config.displayName,
+        version: config.version,
+      });
+      break;
+
+    case 'agent.wait':
+      console.log('[WS AGENT.WAIT]', { runId: params?.runId });
+      sendResponse(ws, id, true, {
+        status: 'completed',
+        output: `${config.displayName} agent completed task`,
+        runId: params?.runId || `run_${randomUUID()}`,
+      });
+      break;
+
+    case 'agents.list':
+      sendResponse(ws, id, true, {
+        agents: [],
+      });
+      break;
+
+    // === Chat Methods ===
     case 'send':
       console.log('[WS SEND REQUEST]', {
         target: params?.target,
@@ -119,27 +235,6 @@ function handleRequest(ws, message, clientId) {
         messageId: `msg_${randomUUID()}`,
         status: 'sent',
       });
-      break;
-
-    case 'agent':
-    case 'agent.run':
-      console.log('[WS AGENT REQUEST - DANGEROUS]', {
-        prompt: params?.prompt?.slice?.(0, 100) || params?.message?.slice?.(0, 100),
-      });
-      sendResponse(ws, id, true, {
-        runId: `run_${randomUUID()}`,
-        status: 'queued',
-      });
-      // Send fake agent events
-      setTimeout(() => {
-        sendEvent(ws, 'agent.started', { runId: `run_${randomUUID()}` });
-      }, 200);
-      setTimeout(() => {
-        sendEvent(ws, 'agent.completed', {
-          runId: `run_${randomUUID()}`,
-          output: `${config.displayName} agent response`,
-        });
-      }, 1000);
       break;
 
     case 'chat.send':
@@ -159,24 +254,89 @@ function handleRequest(ws, message, clientId) {
       });
       break;
 
-    case 'sessions.list':
+    case 'chat.abort':
+      console.log('[WS CHAT.ABORT]');
       sendResponse(ws, id, true, {
-        sessions: [],
+        ok: true,
+        aborted: true,
       });
       break;
 
+    // === Config Methods ===
+    case 'config.get':
+      sendResponse(ws, id, true, {
+        config: {
+          version: config.version,
+          protocol: config.protocol,
+          serviceName: config.serviceName,
+          features: {
+            agent: true,
+            chat: true,
+            tools: true,
+          },
+        },
+      });
+      break;
+
+    case 'config.set':
+      console.log('[WS CONFIG.SET]', { key: params?.key, value: params?.value });
+      sendResponse(ws, id, true, { ok: true });
+      break;
+
+    case 'config.schema':
+      sendResponse(ws, id, true, {
+        schema: {
+          type: 'object',
+          properties: {
+            agent: { type: 'object' },
+            chat: { type: 'object' },
+            tools: { type: 'object' },
+          },
+        },
+      });
+      break;
+
+    case 'config.patch':
+      console.log('[WS CONFIG.PATCH]', { patch: params?.patch });
+      sendResponse(ws, id, true, { ok: true });
+      break;
+
+    // === Node Methods ===
     case 'node.list':
       sendResponse(ws, id, true, {
         nodes: [],
       });
       break;
 
-    case 'status':
+    case 'node.describe':
+      console.log('[WS NODE.DESCRIBE]', { nodeId: params?.nodeId });
       sendResponse(ws, id, true, {
-        status: 'running',
-        version: config.version,
-        protocol: config.protocol,
+        node: {
+          id: params?.nodeId || `node_${randomUUID()}`,
+          name: 'Node',
+          status: 'online',
+          capabilities: ['agent', 'chat', 'tools'],
+          connectedAt: new Date().toISOString(),
+        },
       });
+      break;
+
+    case 'node.pair.request':
+      console.log('[WS NODE.PAIR.REQUEST - SENSITIVE]', { nodeId: params?.nodeId });
+      sendResponse(ws, id, true, {
+        requestId: `pair_${randomUUID()}`,
+      });
+      break;
+
+    case 'node.pair.list':
+      sendResponse(ws, id, true, {
+        requests: [],
+      });
+      break;
+
+    case 'node.pair.approve':
+      console.log('[WS NODE.PAIR.APPROVE - SENSITIVE]', { requestId: params?.requestId });
+      sendResponse(ws, id, true, { ok: true });
       break;
 
     default:
@@ -207,22 +367,60 @@ function handleConnect(ws, message, clientId) {
     protocol: config.protocol,
     server: {
       version: config.version,
+      commit: 'a1b2c3d',
+      host: config.mdns.hostname,
       connId: `ws-${clientId}`,
       name: config.displayName,
     },
     features: {
-      methods: ['health', 'send', 'agent', 'chat.send', 'chat.history', 'sessions.list', 'node.list'],
-      events: ['tick', 'presence', 'agent', 'chat', 'health', 'shutdown'],
+      methods: [
+        'health',
+        'status',
+        'sessions.list',
+        'sessions.preview',
+        'sessions.delete',
+        'sessions.reset',
+        'sessions.compact',
+        'agent',
+        'agent.identity.get',
+        'agent.wait',
+        'agents.list',
+        'chat.send',
+        'chat.history',
+        'chat.abort',
+        'config.get',
+        'config.set',
+        'config.schema',
+        'config.patch',
+        'node.list',
+        'node.describe',
+        'node.pair.request',
+        'node.pair.list',
+        'node.pair.approve',
+        'models.list',
+        'usage.status',
+      ],
+      events: [
+        'connect.challenge',
+        'agent.started',
+        'agent.completed',
+        'presence',
+        'tick',
+        'health',
+        'shutdown',
+      ],
     },
     snapshot: {
+      sessions: [],
+      nodes: [],
       presence: [],
       health: { status: 'ok' },
       stateVersion: { presence: 0, health: 0 },
-      uptimeMs: process.uptime() * 1000,
+      uptimeMs: Math.floor(process.uptime() * 1000),
     },
     policy: {
-      maxPayload: 1048576,
-      maxBufferedBytes: 1048576,
+      maxPayload: 10485760,
+      maxBufferedBytes: 52428800,
       tickIntervalMs: 30000,
     },
   });

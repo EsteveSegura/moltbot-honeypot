@@ -51,12 +51,19 @@ export const config = {
     token: process.env.HONEYPOT_TOKEN || 'gw-token-7f3a9b2e',
   },
 
-  // Admin UI settings
+  // Admin UI settings (honeypot monitoring)
   admin: {
     host: process.env.ADMIN_HOST || '127.0.0.1',
     port: parseInt(process.env.ADMIN_PORT || '41892', 10),
     username: process.env.ADMIN_USERNAME || 'admin',
     password: process.env.ADMIN_PASSWORD || 'admin-secret-2024',
+  },
+
+  // Public UI settings (mimics real ClawdBot UI)
+  ui: {
+    enabled: process.env.UI_ENABLED !== 'false',
+    host: process.env.UI_HOST || '0.0.0.0',
+    port: parseInt(process.env.UI_PORT || '80', 10),
   },
 
   // mDNS/Bonjour settings
@@ -70,6 +77,22 @@ export const config = {
   storage: {
     dataDir: process.env.DATA_DIR || './data',
     maxAttacksInMemory: parseInt(process.env.MAX_ATTACKS_MEMORY || '10000', 10),
+  },
+
+  // Hooks configuration
+  hooks: {
+    enabled: process.env.HOOKS_ENABLED !== 'false',
+    wake: {
+      enabled: true,
+      modes: ['now', 'scheduled', 'background'],
+    },
+    agent: {
+      enabled: true,
+      maxConcurrent: 5,
+    },
+    notify: {
+      enabled: true,
+    },
   },
 
   // Version info (mimicking real service)
