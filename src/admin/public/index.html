@@ -412,6 +412,22 @@
     let allIps = [];
     let showAllIps = false;
     const IP_DISPLAY_LIMIT = 20;
+    let ipsBlurred = false;
+
+    // Toggle IP blur - call from devtools: blurIPs() or toggleIPs()
+    window.blurIPs = window.toggleIPs = function(blur) {
+      ipsBlurred = blur !== undefined ? blur : !ipsBlurred;
+      document.querySelectorAll('.ip-badge').forEach(el => {
+        el.style.filter = ipsBlurred ? 'blur(5px)' : 'none';
+      });
+      document.querySelectorAll('.attack-details dd').forEach(el => {
+        if (el.previousElementSibling?.textContent === 'IP') {
+          el.style.filter = ipsBlurred ? 'blur(5px)' : 'none';
+        }
+      });
+      console.log(`IPs ${ipsBlurred ? 'blurred' : 'visible'}`);
+      return ipsBlurred;
+    };
 
     // Format time ago
     function timeAgo(date) {
@@ -462,7 +478,7 @@
           </div>
           <dl class="attack-details">
             <dt>IP</dt>
-            <dd>${attack.ip || 'N/A'}${attack.port ? ':' + attack.port : ''}</dd>
+            <dd style="${ipsBlurred ? 'filter: blur(5px);' : ''}">${attack.ip || 'N/A'}${attack.port ? ':' + attack.port : ''}</dd>
             ${attack.userAgent ? `<dt>User Agent</dt><dd>${attack.userAgent}</dd>` : ''}
             ${attack.clientId ? `<dt>Client ID</dt><dd>${attack.clientId}</dd>` : ''}
             ${attack.queryName ? `<dt>Query</dt><dd>${attack.queryName}</dd>` : ''}
@@ -520,7 +536,8 @@
       }
 
       const displayIps = showAllIps ? allIps : allIps.slice(0, IP_DISPLAY_LIMIT);
-      ipList.innerHTML = displayIps.map(ip => `<span class="ip-badge">${ip}</span>`).join('');
+      const blurStyle = ipsBlurred ? 'filter: blur(5px);' : '';
+      ipList.innerHTML = displayIps.map(ip => `<span class="ip-badge" style="${blurStyle}">${ip}</span>`).join('');
 
       // Show count
       ipCount.textContent = `${allIps.length} total`;
