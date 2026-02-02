@@ -183,6 +183,8 @@
     .attack-type.http { background: #1f6feb; color: white; }
     .attack-type.ws_connection { background: #8957e5; color: white; }
     .attack-type.ws_message { background: #a371f7; color: white; }
+    .attack-type.mdns_query { background: #f78166; color: white; }
+    .attack-type.mdns_discovery { background: #f78166; color: white; }
     .attack-type.tool_invoke { background: #f85149; color: white; }
     .attack-type.prompt_injection { background: #da3633; color: white; }
     .attack-type.chat_completion { background: #238636; color: white; }
@@ -341,6 +343,10 @@
         <div class="label">WS Messages</div>
         <div class="value" id="stat-ws-msg">0</div>
       </div>
+      <div class="stat-card warning">
+        <div class="label">mDNS Queries</div>
+        <div class="value" id="stat-mdns">0</div>
+      </div>
       <div class="stat-card danger">
         <div class="label">Unique IPs</div>
         <div class="value" id="stat-ips">0</div>
@@ -364,9 +370,13 @@
       <div class="panel">
         <div class="panel-header">
           <h2>Unique Source IPs</h2>
+          <span id="ip-count" style="color: #8b949e; font-size: 12px;"></span>
         </div>
         <div class="ip-list" id="ip-list">
           <!-- Populated dynamically -->
+        </div>
+        <div id="ip-toggle" style="padding: 12px 20px; border-top: 1px solid #30363d; display: none;">
+          <button id="ip-toggle-btn" class="filter-tab" style="width: 100%;">View More...</button>
         </div>
       </div>
     </div>
@@ -379,6 +389,7 @@
           <button class="filter-tab" data-filter="http">HTTP</button>
           <button class="filter-tab" data-filter="ws_connection">WS Connect</button>
           <button class="filter-tab" data-filter="ws_message">WS Message</button>
+          <button class="filter-tab" data-filter="mdns_query">mDNS</button>
           <button class="filter-tab" data-filter="tool_invoke">Tool Invoke</button>
           <button class="filter-tab" data-filter="prompt_injection">Prompt Injection</button>
         </div>
@@ -398,6 +409,9 @@
     let currentFilter = 'all';
     let attacks = [];
     let stats = {};
+    let allIps = [];
+    let showAllIps = false;
+    const IP_DISPLAY_LIMIT = 20;
 
     // Format time ago
     function timeAgo(date) {
@@ -432,34 +446,38 @@
         </div>
       ` : '';
 
+      // Special rendering for mDNS queries
+      const isMdns = attack.type === 'mdns_query';
+      const mdnsInfo = isMdns ? `<span style="margin-left: 8px; color: #8b949e;">${attack.queryTypeName || 'PTR'} ${attack.queryName || ''}</span>` : '';
+      const httpInfo = attack.method ? `<span style="margin-left: 8px; color: #8b949e;">${attack.method} ${attack.path || ''}</span>` : '';
+
       return `
         <li class="attack-item" data-type="${attack.type}" data-category="${attack.category}">
           <div class="attack-header">
             <div>
               <span class="attack-type ${attack.category || attack.type}">${attack.category || attack.type}</span>
-              ${attack.method ? `<span style="margin-left: 8px; color: #8b949e;">${attack.method} ${attack.path || ''}</span>` : ''}
+              ${mdnsInfo || httpInfo}
             </div>
             <span class="attack-time">${timeAgo(attack.timestamp)}</span>
           </div>
           <dl class="attack-details">
             <dt>IP</dt>
-            <dd>${attack.ip || 'N/A'}</dd>
+            <dd>${attack.ip || 'N/A'}${attack.port ? ':' + attack.port : ''}</dd>
             ${attack.userAgent ? `<dt>User Agent</dt><dd>${attack.userAgent}</dd>` : ''}
             ${attack.clientId ? `<dt>Client ID</dt><dd>${attack.clientId}</dd>` : ''}
+            ${attack.queryName ? `<dt>Query</dt><dd>${attack.queryName}</dd>` : ''}
+            ${attack.queryTypeName ? `<dt>Type</dt><dd>${attack.queryTypeName}</dd>` : ''}
           </dl>
           ${bodyHtml}
         </li>
       `;
     }
 
-    // Update attack list
+    // Update attack list (renders current attacks array)
     function updateAttackList() {
       const list = document.getElementById('attack-list');
-      const filtered = currentFilter === 'all'
-        ? attacks
-        : attacks.filter(a => a.type === currentFilter || a.category === currentFilter);
 
-      if (filtered.length === 0) {
+      if (attacks.length === 0) {
         list.innerHTML = `
           <li class="empty-state">
             <div class="icon">📡</div>
@@ -469,7 +487,53 @@
         return;
       }
 
-      list.innerHTML = filtered.map(renderAttack).join('');
+      list.innerHTML = attacks.map(renderAttack).join('');
+    }
+
+    // Fetch attacks from server (with optional type filter)
+    async function fetchAttacks(type = null) {
+      try {
+        const url = type && type !== 'all'
+          ? `/api/attacks?limit=500&type=${type}`
+          : '/api/attacks?limit=500';
+        const res = await fetch(url);
+        const data = await res.json();
+        attacks = data.attacks;
+        updateAttackList();
+      } catch (err) {
+        console.error('Failed to fetch attacks:', err);
+      }
+    }
+
+    // Render IP list with limit
+    function renderIpList() {
+      const ipList = document.getElementById('ip-list');
+      const ipToggle = document.getElementById('ip-toggle');
+      const ipToggleBtn = document.getElementById('ip-toggle-btn');
+      const ipCount = document.getElementById('ip-count');
+
+      if (allIps.length === 0) {
+        ipList.innerHTML = '<span style="color: #8b949e;">No IPs recorded yet</span>';
+        ipToggle.style.display = 'none';
+        ipCount.textContent = '';
+        return;
+      }
+
+      const displayIps = showAllIps ? allIps : allIps.slice(0, IP_DISPLAY_LIMIT);
+      ipList.innerHTML = displayIps.map(ip => `<span class="ip-badge">${ip}</span>`).join('');
+
+      // Show count
+      ipCount.textContent = `${allIps.length} total`;
+
+      // Show/hide toggle button
+      if (allIps.length > IP_DISPLAY_LIMIT) {
+        ipToggle.style.display = 'block';
+        ipToggleBtn.textContent = showAllIps
+          ? 'View Less...'
+          : `View More... (${allIps.length - IP_DISPLAY_LIMIT} hidden)`;
+      } else {
+        ipToggle.style.display = 'none';
+      }
     }
 
     // Update stats display
@@ -477,6 +541,7 @@
       document.getElementById('stat-http').textContent = stats.totalHttpRequests || 0;
       document.getElementById('stat-ws-conn').textContent = stats.totalWsConnections || 0;
       document.getElementById('stat-ws-msg').textContent = stats.totalWsMessages || 0;
+      document.getElementById('stat-mdns').textContent = stats.totalMdnsQueries || 0;
       document.getElementById('stat-ips').textContent = stats.uniqueIps || 0;
       document.getElementById('stat-uptime').textContent = formatUptime(stats.uptimeMs || 0);
 
@@ -510,20 +575,13 @@
         updateStats();
 
         // Fetch attacks
-        const attacksRes = await fetch('/api/attacks?limit=200');
-        const data = await attacksRes.json();
-        attacks = data.attacks;
-        updateAttackList();
+        await fetchAttacks(currentFilter);
 
         // Fetch IPs
         const ipsRes = await fetch('/api/ips');
         const ipsData = await ipsRes.json();
-        const ipList = document.getElementById('ip-list');
-        if (ipsData.ips.length > 0) {
-          ipList.innerHTML = ipsData.ips.map(ip => `<span class="ip-badge">${ip}</span>`).join('');
-        } else {
-          ipList.innerHTML = '<span style="color: #8b949e;">No IPs recorded yet</span>';
-        }
+        allIps = ipsData.ips || [];
+        renderIpList();
       } catch (err) {
         console.error('Failed to fetch data:', err);
       }
@@ -540,17 +598,18 @@
           stats = data.data;
           updateStats();
         } else if (data.type === 'attack') {
-          attacks.unshift(data.data);
-          if (attacks.length > 500) attacks.pop();
-          updateAttackList();
+          const attack = data.data;
+          // Only add if matches current filter or filter is 'all'
+          if (currentFilter === 'all' || attack.type === currentFilter || attack.category === currentFilter) {
+            attacks.unshift(attack);
+            if (attacks.length > 500) attacks.pop();
+            updateAttackList();
+          }
 
           // Update IP list if new IP
-          const ipList = document.getElementById('ip-list');
-          if (data.data.ip && !ipList.innerHTML.includes(data.data.ip)) {
-            const badge = document.createElement('span');
-            badge.className = 'ip-badge';
-            badge.textContent = data.data.ip;
-            ipList.prepend(badge);
+          if (attack.ip && !allIps.includes(attack.ip)) {
+            allIps.unshift(attack.ip);
+            renderIpList();
           }
         }
       };
@@ -567,8 +626,15 @@
         document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentFilter = tab.dataset.filter;
-        updateAttackList();
+        // Fetch from server with filter
+        fetchAttacks(currentFilter);
       });
+    });
+
+    // Setup IP toggle button
+    document.getElementById('ip-toggle-btn').addEventListener('click', () => {
+      showAllIps = !showAllIps;
+      renderIpList();
     });
 
     // Initialize

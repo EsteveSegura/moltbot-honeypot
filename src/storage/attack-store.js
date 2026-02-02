@@ -145,6 +145,47 @@ class AttackStore {
     return attack;
   }
 
+  /**
+   * Record an mDNS query
+   */
+  recordMdnsQuery(data) {
+    const attack = {
+      id: `mdns-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      type: 'mdns_query',
+      timestamp: new Date().toISOString(),
+      ip: data.ip,
+      port: data.port,
+      queryName: data.queryName,
+      queryType: data.queryType,
+      queryTypeName: this._getDnsTypeName(data.queryType),
+      category: 'mdns_discovery',
+    };
+
+    this._addAttack(attack);
+    this.stats.totalMdnsQueries = (this.stats.totalMdnsQueries || 0) + 1;
+    this.stats.uniqueIps.add(data.ip);
+    this._incrementTypeStat('mdns_discovery');
+    this._saveStats();
+
+    return attack;
+  }
+
+  /**
+   * Get DNS record type name
+   */
+  _getDnsTypeName(qtype) {
+    const types = {
+      1: 'A',
+      12: 'PTR',
+      16: 'TXT',
+      28: 'AAAA',
+      33: 'SRV',
+      47: 'NSEC',
+      255: 'ANY',
+    };
+    return types[qtype] || `TYPE${qtype}`;
+  }
+
   _addAttack(attack) {
     this.attacks.push(attack);
     this._appendToLog(attack);
@@ -218,6 +259,7 @@ class AttackStore {
       totalHttpRequests: this.stats.totalHttpRequests,
       totalWsConnections: this.stats.totalWsConnections,
       totalWsMessages: this.stats.totalWsMessages,
+      totalMdnsQueries: this.stats.totalMdnsQueries || 0,
       uniqueIps: this.stats.uniqueIps.size,
       attacksByType: this.stats.attacksByType,
       attacksByEndpoint: this.stats.attacksByEndpoint,

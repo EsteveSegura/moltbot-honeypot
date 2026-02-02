@@ -8,6 +8,7 @@
 import dgram from 'dgram';
 import os from 'os';
 import config from '../config/index.js';
+import attackStore from '../storage/attack-store.js';
 
 let server = null;
 
@@ -286,6 +287,14 @@ export async function startMdnsServer() {
 
       if (query) {
         console.log(`[mDNS-UDP] Query from ${rinfo.address}: ${query.name} (type ${query.qtype})`);
+
+        // Record the mDNS query
+        attackStore.recordMdnsQuery({
+          ip: rinfo.address,
+          port: rinfo.port,
+          queryName: query.name,
+          queryType: query.qtype,
+        });
 
         const response = buildResponse(query);
         server.send(response, rinfo.port, rinfo.address, (err) => {
