@@ -5,7 +5,7 @@
  * Provides methods for querying attack data for the admin UI.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import config from '../config/index.js';
 
@@ -35,6 +35,7 @@ class AttackStore {
   }
 
   _loadExistingData() {
+    // Load stats
     const statsFile = join(this.dataDir, 'stats.json');
     if (existsSync(statsFile)) {
       try {
@@ -47,6 +48,52 @@ class AttackStore {
       } catch (err) {
         console.error('[AttackStore] Failed to load stats:', err.message);
       }
+    }
+
+    // Load attacks from recent log files (last 7 days)
+    this._loadRecentAttacks(7);
+  }
+
+  _loadRecentAttacks(days = 7) {
+    try {
+      if (!existsSync(this.dataDir)) return;
+
+      // Get all attack log files
+      const files = readdirSync(this.dataDir)
+        .filter(f => f.startsWith('attacks-') && f.endsWith('.jsonl'))
+        .sort()
+        .reverse() // Most recent first
+        .slice(0, days); // Last N days
+
+      const allAttacks = [];
+
+      for (const file of files) {
+        try {
+          const content = readFileSync(join(this.dataDir, file), 'utf-8');
+          const lines = content.trim().split('\n').filter(line => line);
+
+          for (const line of lines) {
+            try {
+              const attack = JSON.parse(line);
+              allAttacks.push(attack);
+            } catch (e) {
+              // Skip malformed lines
+            }
+          }
+        } catch (err) {
+          console.error(`[AttackStore] Failed to load ${file}:`, err.message);
+        }
+      }
+
+      // Sort by timestamp (newest first) and limit to maxInMemory
+      this.attacks = allAttacks
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, this.maxInMemory)
+        .reverse(); // Oldest first in array (newest at end)
+
+      console.log(`[AttackStore] Loaded ${this.attacks.length} attacks from disk`);
+    } catch (err) {
+      console.error('[AttackStore] Failed to load recent attacks:', err.message);
     }
   }
 
